@@ -1,0 +1,7 @@
+esamanru Bold (esamanru Bold.ttf)
+Copyright (c) 2020 GONGGAMES. All rights reserved. Font designed by FONTRIX Inc.
+(copyright string as embedded in the font file)
+
+Bundled unmodified under the SIL Open Font License, Version 1.1, as stated by
+the font's distributor. Full license text: https://openfontlicense.org/open-font-license-official-text/
+The font is not sold by itself; it is distributed only as part of this software.

@@ -1,0 +1,37 @@
+{
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+	"id": "castika-deckshow",
+	"type": "connection",
+	"name": "Castika DeckShow",
+	"shortname": "Castika-DeckShow",
+	"description": "Runs the Castika DeckShow (idle-time, audio-reactive) on the Stream Deck keys you place in Companion. Needs the Castika DeckShow installation on this computer.",
+	"version": "0.2.43",
+	"license": "MIT",
+	"repository": "https://github.com/castika-code/DeckShow",
+	"bugs": "https://github.com/castika-code/DeckShow/issues",
+	"maintainers": [
+		{
+			"name": "Castika"
+		}
+	],
+	"legacyIds": [],
+	"runtime": {
+		"type": "node22",
+		"api": "nodejs-ipc",
+		"apiVersion": "2.1.3",
+		"entrypoint": "../src/main.js"
+	},
+	"manufacturer": "Castika",
+	"products": [
+		"Castika DeckShow"
+	],
+	"keywords": [
+		"stream deck",
+		"led",
+		"audio",
+		"visualizer",
+		"screensaver",
+		"castika",
+		"deckshow"
+	]
+}

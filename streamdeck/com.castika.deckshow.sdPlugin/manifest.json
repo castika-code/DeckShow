@@ -1,0 +1,96 @@
+{
+  "Name": "Castika DeckShow",
+  "Version": "0.2.43.0",
+  "Author": "Castika",
+  "URL": "https://github.com/castika-code/DeckShow",
+  "Actions": [
+    {
+      "Name": "DeckShow Button",
+      "UUID": "com.castika.deckshow.key",
+      "Icon": "imgs/actions/key/icon",
+      "Tooltip": "One button of the Castika DeckShow. Short press: start/stop the show. Long press: off for this session.",
+      "PropertyInspectorPath": "ui/inspector.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/key/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    }
+  ],
+  "Profiles": [
+    {
+      "Name": "Castika DeckShow Profile (Mini)",
+      "DeviceType": 1,
+      "Readonly": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "Castika DeckShow Profile (Stream Deck)",
+      "DeviceType": 0,
+      "Readonly": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "Castika DeckShow Profile (XL)",
+      "DeviceType": 2,
+      "Readonly": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "Castika DeckShow Profile (Plus)",
+      "DeviceType": 7,
+      "Readonly": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "Castika DeckShow Profile (Neo)",
+      "DeviceType": 9,
+      "Readonly": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "Castika DeckShow Profile (Plus XL)",
+      "DeviceType": 13,
+      "Readonly": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "Castika DeckShow Profile (Galleon K100)",
+      "DeviceType": 12,
+      "Readonly": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "Castika DeckShow Profile (Virtual)",
+      "DeviceType": 11,
+      "Readonly": true,
+      "DontAutoSwitchWhenInstalled": true
+    }
+  ],
+  "Category": "Castika DeckShow",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "CodePath": "bin/plugin",
+  "CodePathMac": "bin/plugin",
+  "CodePathWin": "bin/Castika.DeckShow.exe",
+  "Description": "Idle-time audio-reactive show for your Stream Deck: listens to the room while you are away and turns the buttons into a spectrum meter.",
+  "Icon": "imgs/plugin/marketplace",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.5"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "10.15"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "UUID": "com.castika.deckshow"
+}

@@ -1,0 +1,13 @@
+#!/bin/bash
+# CodePath launcher: Stream Deck execs this directly.
+# Runs the package's .venv Python against deckshow.py in plugin mode.
+# A plain shell exec (not an .app bundle) never touches the microphone itself:
+# the mic is opened only by Castika.DeckShow.app (installer/daemon_app.sh), so TCC has one
+# clearly named app to ask about.
+set -euo pipefail
+# pwd -P: Stream Deck's Plugins folder holds a symlink to this .sdPlugin (see
+# installer/install.sh), and PROJECT_ROOT must be the real install folder next to it.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+PROJECT_ROOT="$(dirname "$(dirname "$HERE")")"  # streamdeck/<plugin>/ -> package root
+mkdir -p "$HERE/logs"
+exec "$PROJECT_ROOT/.venv/bin/python3" "$PROJECT_ROOT/deckshow.py" plugin "$@" >> "$HERE/logs/plugin-dev.log" 2>&1

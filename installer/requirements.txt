@@ -1,0 +1,10 @@
+# The packages the program imports. Lower bounds only, never exact pins: the
+# installer runs on whatever Python the user has (macOS ships 3.9; on Windows
+# people install the current release), and a pinned version that has no wheel
+# for that Python makes pip fall back to building from source, which fails on a
+# machine without a compiler. pip picks the newest version each Python can take.
+numpy>=1.22
+pillow>=9.5
+sounddevice>=0.4.6
+websockets>=12.0
+fonttools>=4.38

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #2d2d2d;
+    --text: #a0a0a0;
+    --value-bg: #1f1f1f;
+    --value-text: #e8e8e8;
+    --border: #454545;
+    --accent: #0078ff;
+    --radio-off: #4b4b4b;
+    --radio-on: #6c6cff;  /* sdpi.css-style radio blue (eyeballed from the app's own PI) */
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #e8e8e8;
+      --text: #5a5a5a;
+      --value-bg: #ffffff;
+      --value-text: #1a1a1a;
+      --border: #c4c4c4;
+      --accent: #0078ff;
+      --radio-off: #c8c8c8;
+      --radio-on: #5c5cff;
+    }
+  }
+  /* Never wider than the panel Stream Deck gives us (사용자 지적, 2026-09-19:
+     "가로폭이 넘어서서 좌우로 스크롤이 생긴다"). */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { max-width: 100%; overflow-x: hidden; }
+  body { background: var(--bg); color: var(--value-text); font-family: -apple-system, sans-serif; font-size: 12px; margin: 0; padding: 6px 12px 6px 0; }
+  .row { display: flex; align-items: center; margin-bottom: 8px; }
+  /* Label column lined up with Stream Deck's own "Title:" row above the PI:
+     label text ends at ~89px, controls start at ~98px (사용자 지적, 2026-09-19:
+     "앞의 것과 비교하여 시작위치도 다르잖아"). */
+  .row label { flex: 0 0 89px; color: var(--text); text-align: right; padding-right: 0; }
+  .row label.name::after { content: ":"; }
+  .row-values { margin-left: 9px; }
+  .row-values { flex: 1; display: flex; gap: 6px; min-width: 0; }
+  .row-values.no-label { margin-left: 120px; }
+  select, input[type="number"], input[type="text"], textarea {
+    flex: 1; min-width: 0; background: var(--value-bg); color: var(--value-text);
+    border: 1px solid var(--border); border-radius: 5px; padding: 5px 6px; font-size: 12px;
+  }
+  /* `border: none` on the input itself only removes the OUTER box border --
+     WebKit draws its own border around the swatch via a separate pseudo-element
+     (::-webkit-color-swatch), which needed clearing too (사용자 지적,
+     2026-09-19: "그래도 컬러 피커에 테두리가 남았잖아"). */
+  input[type="color"] {
+    flex: 1; min-width: 0; height: 26px; padding: 0; background: var(--value-bg);
+    border: none; border-radius: 5px;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+  /* The input's own box is 16px tall (matching the thumb), and the visible 4px
+     track is drawn via ::-webkit-slider-runnable-track centered inside it --
+     styling input[type=range] itself as the 4px track (previous attempt) made
+     the thumb's centering margin measure against the wrong box and rendered it
+     off-center (사용자 지적, 2026-09-19: "손잡이 위치가 틀어진거야?"). */
+  input[type="range"] {
+    -webkit-appearance: none; flex: 1; height: 16px; background: transparent;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px; background: var(--border);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; margin-top: -6px;
+  }
+  /* Primary button in the app's own accent (SDK info.colors.highlightColor). */
+  button { background: var(--accent); color: #fff; border: none; border-radius: 5px; padding: 6px 16px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .radios button { margin-left: 6px; padding: 4px 12px; }
+  textarea { resize: vertical; font-family: inherit; }
+  /* Floating label (사용자 요청, 2026-09-19): the hint sits inside the empty box and
+     floats up small once the box has text or focus, so the field stays named. */
+  .float { position: relative; flex: 1; min-width: 0; display: flex; }
+  .float textarea { width: 100%; padding-top: 20px; }
+  .float label { position: absolute; left: 7px; top: 8px; right: 7px; color: var(--text); font-size: 12px;
+                 line-height: 1.3; pointer-events: none; transition: all 0.12s ease; text-align: left; flex: none; }
+  .float textarea:focus + label, .float textarea:not(:placeholder-shown) + label {
+    top: 4px; font-size: 11px; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); font-weight: 500; padding: 4px 10px; flex: 0 0 auto; }
+  button.secondary:hover { background: var(--accent); color: #fff; }
+  button:hover { filter: brightness(1.1); }
+  button:active { filter: brightness(0.85); }
+  /* "Learn more" overlay: an in-page panel (the PI is a normal web view, so a
+     plain HTML overlay works; there is no SDK modal). */
+  .learn { display: flex; justify-content: flex-start; align-items: center; gap: 8px; margin: 2px 0 8px 12px; }
+  .learn .pill { font-size: 10px; padding: 2px 8px; border: 1px solid var(--accent); border-radius: 10px; }
+  #help h4 { margin: 10px 0 4px; font-size: 12px; color: var(--value-text); }
+  #help hr { border: 0; border-top: 1px solid var(--border); margin: 8px 0; }
+  #help p, #help li { margin: 0 0 4px; }
+  #help p b, #help li b { color: var(--accent); }
+  #help .credit { color: var(--text); font-size: 11px; }
+  #help .credit a { color: inherit; text-decoration: none; }
+  #help .credit a:hover { color: var(--accent); }
+  .learn .title { color: var(--text); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+  /* The deck this button sits on: "This deck" applies to it. */
+  .learn .deck { color: var(--value-text); font-size: 11px; }
+  .learn a { color: var(--accent); font-size: 11px; text-decoration: none; cursor: pointer; }
+  #help { display: none; position: fixed; inset: 0; background: var(--bg); padding: 10px 14px; overflow-y: auto; z-index: 10; font-size: 12px; line-height: 1.5; }
+  #help.open { display: block; }
+  hr.sep { border: 0; border-top: 1px solid var(--border); margin: 10px 0 10px 12px; }
+  #help h3 { margin: 0 0 8px; font-size: 13px; }
+  #help ol, #help ul { margin: 0 0 12px 18px; padding: 0; }
+  #help li { margin-bottom: 6px; }
+  #help .close { float: right; }
+  .range-value { color: var(--text); flex: 0 0 46px; text-align: right; }
+  .hint { color: var(--text); flex-basis: 100%; font-size: 11.5px; }
+  /* Radios drawn like Stream Deck's own sdpi.css ones (사용자 참고 이미지,
+     2026-09-19): plain grey disc when off, accent ring + dot when on. */
+  .radios { align-items: center; gap: 8px 10px; flex-wrap: wrap; }
+  .radios label { flex: 0 0 auto; color: var(--value-text); text-align: left; padding: 0; display: flex; align-items: center; gap: 5px; font-size: 12.5px; cursor: pointer; }
+  .radios input[type="radio"] {
+    -webkit-appearance: none; appearance: none; margin: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--radio-off); border: 2px solid transparent; box-sizing: border-box; cursor: pointer;
+  }
+  .radios input[type="radio"]:checked {
+    background: var(--bg); border-color: var(--radio-on);
+    background-image: radial-gradient(circle, var(--radio-on) 0 5px, transparent 5.5px);
+  }
+</style>
+</head>
+<body>
+  <div class="learn"><span class="title">Castika DeckShow</span><span id="showDevice" class="deck"></span><a id="learnMore" class="pill">Learn more</a></div>
+  <div id="help">
+    <button type="button" id="closeHelp" class="closeHelp" style="float: right;">Close</button>
+    <h3>How Castika DeckShow works</h3>
+    <hr>
+    <h4>Settings</h4>
+    <p>These settings apply to <b>every DeckShow Button</b>.</p>
+    <p><b>Peak hold</b> leaves a thin line at the highest point a meter reaches, and it slides down one button per second until the meter catches it again. It belongs to the <b>Stripe</b> style, so it is only offered there.</p>
+    <hr>
+    <h4>Start / Stop</h4>
+    <ul>
+      <li><b>Stop on use</b>: with this on, typing or moving the mouse ends the show, like a screen saver. Off leaves it running until a button is pressed.</li>
+      <li>Press any DeckShow Button quickly to <b>start</b> the show. Press it again to <b>stop</b>.</li>
+      <li>The show also starts by itself after the <b>Start After</b> idle time.</li>
+      <li>Hold any DeckShow Button for <b>1.5 seconds</b> to turn the show <b>off for this session</b>. This works even if Auto Restart is on and After stop is set to Resume on idle. A quick press turns it back on.</li>
+    </ul>
+    <hr>
+    <h4>Where the show runs</h4>
+    <ul>
+      <li>If the current page <b>has</b> DeckShow Buttons, the show runs only on those buttons and <b>stays on that page</b>.</li>
+      <li>If the page <b>does not have</b> any DeckShow Buttons, the show <b>switches to</b> the built-in Castika DeckShow Profile for that device. When the show stops, it <b>goes back to the previous profile</b>.</li>
+      <li>Buttons stacked in one column work as <b>one meter</b>. The <b>bottom button fills first</b>, then the one above it.</li>
+    </ul>
+    <hr>
+    <h4>Several Stream Decks</h4>
+    <p>Every connected Stream Deck runs its own show at the same time. Each one decides for itself: its own buttons if it has any, the built-in profile if not.</p>
+    <p><b>This deck</b> applies to the Stream Deck the button is on. Set it to <b>Off</b> for any deck you want to keep out. Every deck is in the show by default.</p>
+    <p>The first time the plugin starts, the Stream Deck app asks you to <b>install the built-in profile</b>. That happens <b>once per kind of device</b> (for example once for a Mini, once for an XL), not once per device. The buttons flash briefly while this happens.</p>
+    <hr>
+    <h4>When your display turns off</h4>
+    <p>The Stream Deck app turns the device off while your display is asleep, so the show is not visible then. When the display comes back on, the show <b>continues where it left off</b>. Display sleep is set in your operating system, not here.</p>
+    <hr>
+    <h4>After stop</h4>
+    <ul>
+      <li><b>Resume on idle:</b> The show starts again at the next idle time.</li>
+      <li><b>Stay off:</b> The show stays off <b>until the next boot or wake</b> (if Auto Restart is on) or <b>until you set This deck back to On</b>.</li>
+    </ul>
+    <hr>
+    <p class="credit">Castika DeckShow. <a href="https://github.com/castika-code/DeckShow" target="_blank">github.com/castika-code/DeckShow</a></p>
+    <p style="text-align: right;"><button type="button" class="closeHelp">Close</button></p>
+  </div>
+
+  <div class="row" id="deckRow">
+    <label class="name">This deck</label>
+    <div class="row-values radios" id="enabled">
+      <label><input type="radio" name="enabled" value="true" checked>On</label>
+      <label><input type="radio" name="enabled" value="false">Off</label>
+    </div>
+  </div>
+  <div class="row">
+    <label></label>
+    <div class="row-values"><button id="startNow" type="button">Start Now</button></div>
+  </div>
+  <hr class="sep" id="deckSep">
+  <div class="row">
+    <label class="name">Auto Restart</label>
+    <div class="row-values radios" id="autoRestart">
+      <label><input type="radio" name="autoRestart" value="true" checked>On</label>
+      <label><input type="radio" name="autoRestart" value="false">Off</label>
+    </div>
+  </div>
+  <div class="row">
+    <label class="name">Stop on use</label>
+    <div class="row-values radios" id="stopOnActivity">
+      <label><input type="radio" name="stopOnActivity" value="true" checked>On</label>
+      <label><input type="radio" name="stopOnActivity" value="false">Off</label>
+    </div>
+  </div>
+  <div class="row">
+    <label class="name">After stop</label>
+    <div class="row-values radios" id="startMode">
+      <label><input type="radio" name="startMode" value="always" checked>Resume on idle</label>
+      <label><input type="radio" name="startMode" value="standby">Stay off</label>
+    </div>
+  </div>
+  <hr class="sep">
+  <div class="row">
+    <label class="name">Style</label>
+    <div class="row-values radios" id="segmentStyle">
+      <label><input type="radio" name="segmentStyle" value="icons" checked>Text</label>
+      <label><input type="radio" name="segmentStyle" value="bar">Stripe</label>
+      <label><input type="radio" name="segmentStyle" value="solid">Solid</label>
+      <label><input type="radio" name="segmentStyle" value="cycle">Random</label>
+    </div>
+  </div>
+  <div id="textGroup">
+  <div class="row">
+    <label for="iconFontPath" class="name">Font</label>
+    <div class="row-values">
+      <select id="iconFontPath"><option value="" disabled>Select Font</option><option value="">ESAMANRU</option></select>
+      <button id="openFonts" type="button" class="secondary" title="Opens your fonts folder. Drop .ttf/.otf/.woff files there and they appear in this list.">User fonts…</button>
+    </div>
+  </div>
+  <div class="row">
+    <label for="iconGlyphs"></label>
+    <div class="row-values">
+      <div class="float">
+        <textarea id="iconGlyphs" rows="3" placeholder=" "></textarea>
+        <label for="iconGlyphs">Text to display, one character at a time. Empty = random characters.</label>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="row" id="peakRow">
+    <label class="name">Peak hold</label>
+    <div class="row-values radios" id="peakHold">
+      <label><input type="radio" name="peakHold" value="true" checked>On</label>
+      <label><input type="radio" name="peakHold" value="false">Off</label>
+    </div>
+  </div>
+  <div id="barGroup">
+  <div class="row">
+    <label class="name">Color</label>
+    <div class="row-values radios" id="colorScheme">
+      <label><input type="radio" name="colorScheme" value="tone">Gradient</label>
+      <label><input type="radio" name="colorScheme" value="tier" checked>Fixed</label>
+    </div>
+  </div>
+  <div class="row">
+    <label></label>
+    <div class="row-values">
+      <input id="colorLow" type="color" value="#00e65a">
+      <input id="colorMid" type="color" value="#ffdc00">
+      <input id="colorHigh" type="color" value="#ff2828">
+    </div>
+  </div>
+  <div class="row">
+    <label for="barsPerKey" class="name">Bars</label>
+    <div class="row-values">
+      <input id="barsPerKey" type="range" min="1" max="14" step="1" value="4">
+      <span id="barsPerKeyValue" class="range-value">4</span>
+    </div>
+  </div>
+  </div>
+  <div class="row">
+    <label for="idleMinutes" class="name">Start After</label>
+    <div class="row-values">
+      <input id="idleMinutes" type="range" min="0.5" max="30" step="0.5" value="1">
+      <span id="idleMinutesValue" class="range-value">1 min</span>
+    </div>
+  </div>
+  <div class="row">
+    <label class="name">Rotate</label>
+    <div class="row-values radios" id="rotation">
+      <label><input type="radio" name="rotation" value="0" checked>0°</label>
+      <label><input type="radio" name="rotation" value="90">90°</label>
+      <label><input type="radio" name="rotation" value="180">180°</label>
+      <label><input type="radio" name="rotation" value="270">270°</label>
+    </div>
+  </div>
+  <div class="row">
+    <label for="sensitivity" class="name">Sensitivity</label>
+    <div class="row-values">
+      <input id="sensitivity" type="range" min="-8" max="8" step="1" value="0">
+      <span id="sensitivityValue" class="range-value">1.00x</span>
+    </div>
+  </div>
+  <div class="row">
+    <label for="gateMs" class="name">Gate</label>
+    <div class="row-values">
+      <input id="gateMs" type="range" min="0" max="1000" step="50" value="0">
+      <span id="gateMsValue" class="range-value">Off</span>
+    </div>
+  </div>
+  <div class="row">
+    <label class="name">Analysis</label>
+    <div class="row-values radios" id="levelMode">
+      <label><input type="radio" name="levelMode" value="absolute">Absolute</label>
+      <label><input type="radio" name="levelMode" value="relative" checked>Relative</label>
+    </div>
+  </div>
+
+<script>
+// Standard Stream Deck Property Inspector bridge -- Stream Deck calls this
+// global function when it loads this page, on its own separate WebSocket
+// connection (independent of adapters/elgato/plugin.py's own connection).
+// Plain native inputs styled to match Stream Deck's own native property
+// inspector look (사용자 지적, 2026-09-19, comparing against Volume Controller's
+// PI) -- tried the official sdpi-components web-component library first, but
+// its <sdpi-color>/<sdpi-range> did not reflect a `value` attribute/property in
+// testing (confirmed via direct DOM inspection, not a guess), so settings are
+// driven the same proven way as every other control here: plain elements +
+// getGlobalSettings/setGlobalSettings. prefers-color-scheme handles light/dark
+// Stream Deck app themes (사용자 지적: "시스템 컬러가 있는 것 같음").
+let websocket = null, uuid = null, actionUUID = null, pendingFontPath = null, thisDeviceId = null;
+let current = {};  // full global-settings object, see setGlobalSetting()
+
+function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
+  uuid = inUUID;
+  // The SDK hands the app's colors over in inInfo.colors (highlightColor etc.) --
+  // the only theme information it provides. Use its accent for our controls.
+  let info = {};
+  try { info = JSON.parse(inInfo) || {}; } catch (e) {}
+  try {
+    const ai = JSON.parse(inActionInfo) || {};
+    actionUUID = ai.action || null;
+    thisDeviceId = ai.device || null;  // the Stream Deck this button sits on
+  } catch (e) {}
+  const accent = info.colors && info.colors.highlightColor;
+  if (typeof accent === "string" && accent.length >= 7) {
+    document.documentElement.style.setProperty("--accent", accent.slice(0, 7));
+  }
+  websocket = new WebSocket("ws://127.0.0.1:" + inPort);
+  websocket.onopen = () => {
+    websocket.send(JSON.stringify({ event: inRegisterEvent, uuid: inUUID }));
+    websocket.send(JSON.stringify({ event: "getGlobalSettings", context: inUUID }));
+    askPlugin("listFonts");
+    askPlugin("whichDevice");  // "This deck" is per deck: show which deck this button is on
+  };
+  websocket.onmessage = (evt) => {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch (e) { return; }
+    if (msg.event === "sendToPropertyInspector" && msg.payload && msg.payload.fonts) {
+      fillFonts(msg.payload.fonts, pendingFontPath !== null ? pendingFontPath : undefined);
+      pendingFontPath = null;
+    }
+    if (msg.event === "sendToPropertyInspector" && msg.payload && typeof msg.payload.deviceName === "string") {
+      document.getElementById("showDevice").textContent = msg.payload.deviceName;
+    }
+    if (msg.event === "didReceiveGlobalSettings") {
+      const s = (msg.payload && msg.payload.settings) || {};
+      current = Object.assign({}, s);
+      if (Array.isArray(s.disabledDevices)) setRadio("enabled", s.disabledDevices.includes(thisDeviceId) ? "false" : "true");
+      if (typeof s.autoRestart === "boolean") setRadio("autoRestart", String(s.autoRestart));
+      if (typeof s.peakHold === "boolean") setRadio("peakHold", String(s.peakHold));
+      if (typeof s.stopOnActivity === "boolean") setRadio("stopOnActivity", String(s.stopOnActivity));
+      if (typeof s.startMode === "string") setRadio("startMode", s.startMode);
+      if (typeof s.idleThresholdMinutes === "number") {
+        document.getElementById("idleMinutes").value = s.idleThresholdMinutes;
+        document.getElementById("idleMinutesValue").textContent = minutesLabel(s.idleThresholdMinutes);
+      }
+      if (typeof s.colorScheme === "string") setRadio("colorScheme", s.colorScheme);
+      if (typeof s.iconFontPath === "string") {
+        const sel = document.getElementById("iconFontPath");
+        sel.value = s.iconFontPath;
+        if (sel.value !== s.iconFontPath) pendingFontPath = s.iconFontPath;  // list not in yet
+        markSelectedFont();
+      }
+      if (typeof s.iconGlyphs === "string") document.getElementById("iconGlyphs").value = s.iconGlyphs;
+      if (typeof s.segmentStyle === "string") { setRadio("segmentStyle", s.segmentStyle); showStyleGroups(); }
+      if (typeof s.barsPerKey === "number") {
+        document.getElementById("barsPerKey").value = s.barsPerKey;
+        document.getElementById("barsPerKeyValue").textContent = s.barsPerKey;
+      }
+      if (typeof s.colorLow === "string") document.getElementById("colorLow").value = s.colorLow;
+      if (typeof s.colorMid === "string") document.getElementById("colorMid").value = s.colorMid;
+      if (typeof s.colorHigh === "string") document.getElementById("colorHigh").value = s.colorHigh;
+      if (typeof s.rotationDegrees === "number") setRadio("rotation", String(s.rotationDegrees));
+      if (typeof s.levelMode === "string") setRadio("levelMode", s.levelMode);
+      if (typeof s.sensitivity === "number") {
+        document.getElementById("sensitivity").value = Math.round(Math.log2(s.sensitivity) * 4);
+        document.getElementById("sensitivityValue").textContent = s.sensitivity.toFixed(2) + "x";
+      }
+      if (typeof s.gateMs === "number") {
+        document.getElementById("gateMs").value = s.gateMs;
+        document.getElementById("gateMsValue").textContent = gateLabel(s.gateMs);
+      }
+    }
+  };
+}
+
+// setGlobalSettings REPLACES the whole stored object with the payload -- sending
+// just the changed key wiped every other setting on each change, so only the
+// last-touched one ever survived a plugin restart (found 2026-09-19). Keep the
+// full object here and always send all of it.
+
+function setGlobalSetting(patch) {
+  if (!websocket || websocket.readyState !== 1) return;
+  current = Object.assign({}, current, patch);
+  websocket.send(JSON.stringify({ event: "setGlobalSettings", context: uuid, payload: current }));
+}
+
+function minutesLabel(m) { return (m % 1 === 0 ? m : m.toFixed(1)) + " min"; }
+
+document.getElementById("idleMinutes").addEventListener("input", (e) => {
+  const minutes = parseFloat(e.target.value);
+  if (isNaN(minutes) || minutes <= 0) return;
+  document.getElementById("idleMinutesValue").textContent = minutesLabel(minutes);
+  setGlobalSetting({ idleThresholdMinutes: minutes });
+});
+
+document.getElementById("colorScheme").addEventListener("change", (e) => {
+  setGlobalSetting({ colorScheme: e.target.value });
+});
+
+// Fonts are picked by name from the user's fonts folder (the plugin lists it and
+// opens it in Finder on request); a web file picker never yields a usable path.
+function fillFonts(fonts, keepValue) {
+  const sel = document.getElementById("iconFontPath");
+  const current = keepValue !== undefined ? keepValue : sel.value;
+  sel.innerHTML = '<option value="" disabled>Select Font</option>';  // heading, not selectable
+  for (const f of fonts || []) {  // plugin sends bundled fonts first (ESAMANRU, BOOTSTRAP ICONS), then the user's folder
+    const o = document.createElement("option"); o.value = f.path; o.textContent = f.name; sel.appendChild(o);
+  }
+  sel.value = current;
+  if (sel.value !== current && sel.options.length > 1) sel.selectedIndex = 1;  // ESAMANRU
+  markSelectedFont();
+}
+
+// Native <select> items cannot be styled, but their text can: the chosen font
+// carries a check mark in the list (사용자 요청, 2026-09-19).
+function markSelectedFont() {
+  const sel = document.getElementById("iconFontPath");
+  for (const o of sel.options) {
+    if (o.disabled) continue;
+    const name = o.textContent.replace(/^✓ /, "");
+    o.textContent = (o.selected ? "✓ " : "") + name;
+  }
+}
+function askPlugin(command) {
+  if (!websocket || websocket.readyState !== 1) return;
+  websocket.send(JSON.stringify({ event: "sendToPlugin", action: actionUUID, context: uuid, payload: { command } }));
+}
+document.getElementById("openFonts").addEventListener("click", () => askPlugin("openFontsFolder"));
+
+document.getElementById("iconFontPath").addEventListener("change", (e) => {
+  markSelectedFont();
+  setGlobalSetting({ iconFontPath: e.target.value.trim() });
+});
+document.getElementById("iconGlyphs").addEventListener("change", (e) => {
+  setGlobalSetting({ iconGlyphs: e.target.value });
+});
+
+// Only the settings that apply to the chosen style are shown (사용자 지적,
+// 2026-09-19: Color/palette/Bars belong to Stripe/Solid, Font/text to Text).
+function showStyleGroups() {
+  const v = (document.querySelector('input[name="segmentStyle"]:checked') || {}).value || "icons";
+  // Random cycles through the other styles with their own settings, so it shows none of them.
+  document.getElementById("textGroup").style.display = (v === "icons") ? "" : "none";
+  document.getElementById("barGroup").style.display = (v === "bar" || v === "solid") ? "" : "none";
+  document.getElementById("peakRow").style.display = (v === "bar") ? "" : "none";  // the line needs the slats to sit on
+}
+document.getElementById("segmentStyle").addEventListener("change", (e) => {
+  showStyleGroups();
+  setGlobalSetting({ segmentStyle: e.target.value });
+});
+showStyleGroups();
+
+document.getElementById("barsPerKey").addEventListener("input", (e) => {
+  const n = parseInt(e.target.value, 10);
+  document.getElementById("barsPerKeyValue").textContent = n;
+  setGlobalSetting({ barsPerKey: n });
+});
+
+for (const id of ["colorLow", "colorMid", "colorHigh"]) {
+  document.getElementById(id).addEventListener("input", () => {
+    setGlobalSetting({  // always send all three, so the stored object is complete
+      colorLow: document.getElementById("colorLow").value,
+      colorMid: document.getElementById("colorMid").value,
+      colorHigh: document.getElementById("colorHigh").value,
+    });
+  });
+}
+
+function setRadio(name, value) {
+  const el = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
+  if (el) el.checked = true;
+}
+
+function gateLabel(ms) { return ms === 0 ? "Off" : (ms >= 1000 ? (ms / 1000) + " s" : ms + " ms"); }
+
+// One-shot command to the plugin (SDK "sendToPlugin"), not a setting: start the
+// show right now without waiting for idle (사용자 요청, 2026-09-19: "강제 시작을
+// 넣어. 설정에" -- replaces the developer-only marker file).
+document.getElementById("startNow").addEventListener("click", () => {
+  if (!websocket || websocket.readyState !== 1) return;
+  websocket.send(JSON.stringify({ event: "sendToPlugin", action: actionUUID, context: uuid,
+                                  payload: { command: "startNow" } }));
+});
+
+document.getElementById("learnMore").addEventListener("click", () => {
+  document.getElementById("help").classList.add("open");
+});
+for (const el of document.querySelectorAll(".closeHelp")) {
+  el.addEventListener("click", () => {  // Close at the top and at the bottom (사용자 지적)
+    document.getElementById("help").classList.remove("open");
+    document.getElementById("help").scrollTop = 0;
+  });
+}
+
+// "This deck" is per Stream Deck: it applies to the deck this button sits on
+// (inActionInfo.device; 사용자 확정 2026-09-20 "show on off를 이용하자"). Stored as
+// the list of decks switched OFF, so a deck plugged in later is on by default.
+document.getElementById("enabled").addEventListener("change", (e) => {
+  if (!thisDeviceId) return;
+  const off = new Set(Array.isArray(current.disabledDevices) ? current.disabledDevices : []);
+  if (e.target.value === "true") off.delete(thisDeviceId); else off.add(thisDeviceId);
+  setGlobalSetting({ disabledDevices: Array.from(off) });
+});
+
+document.getElementById("stopOnActivity").addEventListener("change", (e) => {
+  setGlobalSetting({ stopOnActivity: e.target.value === "true" });
+});
+document.getElementById("peakHold").addEventListener("change", (e) => {
+  setGlobalSetting({ peakHold: e.target.value === "true" });
+});
+
+document.getElementById("autoRestart").addEventListener("change", (e) => {
+  setGlobalSetting({ autoRestart: e.target.value === "true" });
+});
+
+document.getElementById("startMode").addEventListener("change", (e) => {
+  setGlobalSetting({ startMode: e.target.value });
+});
+
+document.getElementById("rotation").addEventListener("change", (e) => {
+  setGlobalSetting({ rotationDegrees: parseInt(e.target.value, 10) });
+});
+
+// Log-scaled: slider step = 2^(1/4), so 0.25x..4x is symmetric around 1x and
+// equally fine on both sides (사용자 지적, 2026-09-19: "지수형식이면 더 촘촘해야").
+document.getElementById("sensitivity").addEventListener("input", (e) => {
+  const v = Math.pow(2, parseInt(e.target.value, 10) / 4);
+  document.getElementById("sensitivityValue").textContent = v.toFixed(2) + "x";
+  setGlobalSetting({ sensitivity: Math.round(v * 1000) / 1000 });
+});
+
+document.getElementById("gateMs").addEventListener("input", (e) => {
+  const ms = parseInt(e.target.value, 10);
+  document.getElementById("gateMsValue").textContent = gateLabel(ms);
+  setGlobalSetting({ gateMs: ms });
+});
+
+document.getElementById("levelMode").addEventListener("change", (e) => {
+  setGlobalSetting({ levelMode: e.target.value });
+});
+</script>
+</body>
+</html>
